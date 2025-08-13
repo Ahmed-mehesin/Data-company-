@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>لوحة الشركات والمشاريع</title>
+<style>
+  :root{
+    --bg:#F7FAFF; --card:#FFFFFF; --text:#0F172A; --muted:#475569;
+    --brand:#2E7DFF; --ok:#16A34A; --warn:#EA580C; --border:#E2E8F0;
+    --shadow:0 8px 24px rgba(2, 6, 23, .08);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Kufi Arabic", Tahoma, Arial;
+    background:linear-gradient(180deg,#F0F6FF 0%, #F7FAFF 100%);
+    color:var(--text);
+  }
+  header{
+    padding:20px; display:flex; gap:12px; align-items:center; justify-content:space-between;
+  }
+  .brand{font-weight:800; letter-spacing:.3px; font-size:18px}
+  .pill{
+    display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border:1px solid var(--border);
+    background:var(--card); border-radius:999px; box-shadow:var(--shadow);
+  }
+  .container{max-width:1100px; margin:0 auto; padding:12px 20px 40px}
+  .grid{display:grid; grid-template-columns:1fr; gap:16px}
+  @media (min-width: 980px){ .grid{grid-template-columns: 1fr 1.2fr} }
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:16px;
+  }
+  .card h3{margin:0 0 10px 0; font-size:18px}
+  .muted{color:var(--muted); font-size:13px}
+  textarea{
+    width:100%; min-height:260px; border:1px solid var(--border); border-radius:12px; padding:12px; resize:vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace; line-height:1.5;
+  }
+  .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+  .row > *{flex:0 0 auto}
+  input[type="file"]{border:1px dashed var(--border); padding:8px 10px; border-radius:10px; background:#FBFDFF}
+  button{
+    border:1px solid var(--border); background:#fff; padding:10px 14px; border-radius:12px; cursor:pointer;
+    transition:.15s transform ease, .15s box-shadow ease;
+  }
+  button.primary{background:var(--brand); color:#fff; border-color:transparent}
+  button:hover{transform:translateY(-1px); box-shadow:var(--shadow)}
+  .table-wrap{overflow:auto; border:1px solid var(--border); border-radius:12px}
+  table{width:100%; border-collapse:collapse; min-width:720px}
+  th, td{padding:12px 10px; border-bottom:1px solid var(--border); vertical-align:top}
+  th{background:#F3F7FF; text-align:start; position:sticky; top:0; z-index:1; font-weight:700}
+  tr:hover td{background:#FAFCFF}
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px}
+  .toolbar input[type="search"]{flex:1 1 220px; padding:10px 12px; border:1px solid var(--border); border-radius:10px}
+  .badge{padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid var(--border); background:#FAFCFF}
+  .status.ok{color:#065F46; background:#ECFDF5; border-color:#A7F3D0}
+  .status.hold{color:#7C2D12; background:#FFF7ED; border-color:#FED7AA}
+  .status.stop{color:#991B1B; background:#FEF2F2; border-color:#FECACA}
+  .lang{cursor:pointer}
+  .help{font-size:12px; color:var(--muted); margin-top:8px}
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">لوحة الشركات والمشاريع</div>
+    <div class="pill">
+      <span id="autosaveStatus">Auto-save: On</span>
+      <span class="lang" id="toggleLang" title="Toggle Language">🌐 عربي</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="grid">
+      <!-- RAW DATA CARD -->
+      <section class="card" id="rawCard">
+        <h3 id="rawTitle">البيانات الخام (غير مرتبة)</h3>
+        <p class="muted" id="rawHint">
+          الصق بياناتك (سطر لكل شركة) بالترتيب: <b>اسم الشركة, حالة الشركة, عدد المشاريع, المشاريع الحالية</b>.
+          أو ارفع ملف CSV وسيتم التحديث تلقائيًا.
+        </p>
+        <div class="row" style="margin-bottom:8px">
+          <input id="fileInput" type="file" accept=".csv" />
+          <button id="btnSample">ملء بيانات تجريبية</button>
+          <button id="btnClear">مسح</button>
+          <button id="btnSave" class="primary">حفظ</button>
+          <button id="btnExportRaw">تصدير CSV</button>
+        </div>
+        <textarea id="rawTextarea" placeholder="شركة ألفا, نشطة, 5, مشروع A; مشروع B&#10;شركة بيتا, متوقفة, 2, مشروع X"></textarea>
+        <div class="help" id="rawTips">
+          ملاحظات: افصل القيم بـ (فاصلة ,) والمشاريع بقيم مفصولة بنقطة فاصلة منقوطة أو فاصلة.
+        </div>
+      </section>
+
+      <!-- CLEAN TABLE CARD -->
+      <section class="card">
+        <h3 id="cleanTitle">جدول مرتب</h3>
+        <div class="toolbar">
+          <input id="q" type="search" placeholder="بحث بالاسم أو الحالة أو المشروع…" />
+          <button id="btnExportClean">تصدير CSV (المرتب)</button>
+          <button id="btnSortName">ترتيب حسب الاسم ↑↓</button>
+          <button id="btnSortCount">ترتيب حسب عدد المشاريع ↑↓</button>
+        </div>
+        <div class="table-wrap">
+          <table id="table">
+            <thead>
+              <tr>
+                <th id="th1">اسم الشركة</th>
+                <th id="th2">حالة الشركة</th>
+                <th id="th3">عدد المشاريع</th>
+                <th id="th4">المشاريع الحالية</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // --- i18n ---
+  const L = {
+    ar:{
+      brand:'لوحة الشركات والمشاريع',
+      rawTitle:'البيانات الخام (غير مرتبة)',
+      rawHint:'الصق بياناتك (سطر لكل شركة) بالترتيب: اسم الشركة, حالة الشركة, عدد المشاريع, المشاريع الحالية. أو ارفع ملف CSV وسيتم التحديث تلقائيًا.',
+      rawTips:'ملاحظات: افصل القيم بـ (فاصلة ,) والمشاريع بقيم مفصولة بنقطة فاصلة منقوطة أو فاصلة.',
+      cleanTitle:'جدول مرتب',
+      searchPh:'بحث بالاسم أو الحالة أو المشروع…',
+      th1:'اسم الشركة', th2:'حالة الشركة', th3:'عدد المشاريع', th4:'المشاريع الحالية',
+      sample:'ملء بيانات تجريبية', clear:'مسح', save:'حفظ', exportRaw:'تصدير CSV',
+      exportClean:'تصدير CSV (المرتب)', sortName:'ترتيب حسب الاسم ↑↓', sortCount:'ترتيب حسب عدد المشاريع ↑↓',
+      autosave:'الحفظ التلقائي: مفعل', lang:'🌐 عربي'
+    },
+    en:{
+      brand:'Companies & Projects Dashboard',
+      rawTitle:'Raw Data (Unsorted)',
+      rawHint:'Paste your rows (one per company): Company, Status, Projects Count, Current Projects. Or upload a CSV; the table auto-updates.',
+      rawTips:'Tip: use commas to separate columns; use semicolons or commas between project names.',
+      cleanTitle:'Clean Table',
+      searchPh:'Search by name, status, or project…',
+      th1:'Company', th2:'Status', th3:'Projects Count', th4:'Current Projects',
+      sample:'Fill Sample Data', clear:'Clear', save:'Save', exportRaw:'Export CSV',
+      exportClean:'Export CSV (Clean)', sortName:'Sort by Name ↑↓', sortCount:'Sort by Count ↑↓',
+      autosave:'Auto-save: On', lang:'🌐 English'
+    }
+  };
+  let lang = localStorage.getItem('lang') || 'ar';
+  const $ = sel => document.querySelector(sel);
+
+  function applyLang(){
+    const t = L[lang];
+    document.title = t.brand;
+    document.querySelector('.brand').textContent = t.brand;
+    $('#rawTitle').textContent = t.rawTitle;
+    $('#rawHint').textContent = t.rawHint;
+    $('#rawTips').textContent = t.rawTips;
+    $('#cleanTitle').textContent = t.cleanTitle;
+    $('#q').placeholder = t.searchPh;
+    $('#th1').textContent = t.th1;
+    $('#th2').textContent = t.th2;
+    $('#th3').textContent = t.th3;
+    $('#th4').textContent = t.th4;
+    $('#btnSample').textContent = t.sample;
+    $('#btnClear').textContent = t.clear;
+    $('#btnSave').textContent = t.save;
+    $('#btnExportRaw').textContent = t.exportRaw;
+    $('#btnExportClean').textContent = t.exportClean;
+    $('#btnSortName').textContent = t.sortName;
+    $('#btnSortCount').textContent = t.sortCount;
+    $('#autosaveStatus').textContent = t.autosave;
+    $('#toggleLang').textContent = t.lang;
+
+    // Direction switch
+    if(lang==='ar'){ document.documentElement.dir='rtl'; }
+    else { document.documentElement.dir='ltr'; }
+  }
+
+  $('#toggleLang').addEventListener('click', () => {
+    lang = (lang==='ar') ? 'en' : 'ar';
+    localStorage.setItem('lang', lang);
+    applyLang();
+    render();
+  });
+
+  // --- CSV helpers (simple, for comma-separated; supports quoted commas) ---
+  function parseCSV(text){
+    const rows = [];
+    let cur = '', row = [], inQuotes = false;
+    for(let i=0;i<text.length;i++){
+      const ch = text[i], next = text[i+1];
+      if(ch === '"' ){
+        if(inQuotes && next === '"'){ cur+='"'; i++; }
+        else { inQuotes = !inQuotes; }
+      } else if(ch === ',' && !inQuotes){
+        row.push(cur.trim()); cur = '';
+      } else if((ch === '\n' || ch === '\r') && !inQuotes){
+        if(cur !== '' || row.length){ row.push(cur.trim()); rows.push(row); }
+        cur=''; row=[];
+        // swallow \r\n
+        if(ch === '\r' && next === '\n') i++;
+      } else {
+        cur += ch;
+      }
+    }
+    if(cur !== '' || row.length) { row.push(cur.trim()); rows.push(row); }
+    return rows.filter(r=> r.some(c=>c!=='')); // drop empty lines
+  }
+
+  function toCSV(rows){
+    return rows.map(r=>r.map(val=>{
+      val = (val ?? '').toString();
+      if(/[",\n]/.test(val)) return `"${val.replace(/"/g,'""')}"`;
+      return val;
+    }).join(',')).join('\n');
+  }
+
+  // --- Storage ---
+  const KEY = 'companies_raw_csv';
+  function loadRaw(){
+    return localStorage.getItem(KEY) || '';
+  }
+  function saveRaw(text){
+    localStorage.setItem(KEY, text || '');
+  }
+
+  // --- Transform raw -> records ---
+  function parseRawToRecords(rawText){
+    // Accept either CSV or free text "a, b, c, d"
+    const rows = parseCSV(rawText);
+    // Normalize: [name, status, count, projects]
+    const records = rows.map(r=>{
+      const [name='', status='', count='', projects=''] = r;
+      // allow project list separated by ; or , inside the 4th column
+      let proj = projects
+        .split(/;|،/).join(',') // support Arabic punctuation
+        .split(',').map(s=>s.trim()).filter(Boolean).join(', ');
+      const n = parseInt((count||'').toString().replace(/[^\d\-]/g,''),10);
+      return {
+        name: name.trim(),
+        status: status.trim(),
+        count: Number.isFinite(n) ? n : (proj ? proj.split(',').length : 0),
+        projects: proj
+      };
+    }).filter(x=>x.name);
+    return records;
+  }
+
+  // --- State & sorting ---
+  let sortKey = 'name', sortDir = 1; // 1 asc, -1 desc
+  function sortRecords(list){
+    return [...list].sort((a,b)=>{
+      const A = (sortKey==='count') ? (a.count||0) : (a[sortKey]||'').toString().toLowerCase();
+      const B = (sortKey==='count') ? (b.count||0) : (b[sortKey]||'').toString().toLowerCase();
+      if(A<B) return -1*sortDir;
+      if(A>B) return 1*sortDir;
+      return 0;
+    });
+  }
+
+  // --- Render ---
+  function statusBadge(status){
+    const s = (status||'').toLowerCase();
+    let cls = 'badge status';
+    if(/نشط|active|ongoing/.test(s)) cls += ' ok';
+    else if(/إيقاف|متوقف|stopp?ed|paused|hold/.test(s)) cls += ' stop';
+    else cls += ' hold';
+    return `<span class="${cls}">${status||''}</span>`;
+  }
+
+  function render(){
+    const raw = $('#rawTextarea').value;
+    const q = $('#q').value.trim().toLowerCase();
+    let recs = parseRawToRecords(raw);
+
+    if(q){
+      recs = recs.filter(r=>{
+        return [r.name, r.status, r.projects, String(r.count)]
+          .join(' ').toLowerCase().includes(q);
+      });
+    }
+
+    recs = sortRecords(recs);
+
+    const rows = recs.map(r=>`
+      <tr>
+        <td>${r.name || ''}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td>${Number.isFinite(r.count)? r.count : ''}</td>
+        <td>${r.projects || ''}</td>
+      </tr>
+    `).join('');
+
+    $('#tbody').innerHTML = rows || `<tr><td colspan="4" class="muted">لا توجد بيانات للعرض</td></tr>`;
+  }
+
+  // --- Events ---
+  $('#btnSample').addEventListener('click', ()=>{
+    const sample = [
+      'شركة ألفا, نشطة, 5, مشروع A; مشروع B',
+      'شركة بيتا, متوقفة, 2, مشروع X',
+      'شركة جاما, نشطة, 8, مشروع Y; مشروع Z; مشروع W',
+      'شركة دلتا, قيد الإنشاء, 3, مشروع M',
+      'شركة إبسيلون, نشطة, 1, مشروع Q'
+    ].join('\n');
+    $('#rawTextarea').value = sample;
+    saveRaw(sample);
+    render();
+  });
+
+  $('#btnClear').addEventListener('click', ()=>{
+    $('#rawTextarea').value = '';
+    saveRaw('');
+    render();
+  });
+
+  $('#btnSave').addEventListener('click', ()=>{
+    saveRaw($('#rawTextarea').value);
+    render();
+  });
+
+  $('#q').addEventListener('input', render);
+  $('#rawTextarea').addEventListener('input', ()=>{
+    // autosave on input
+    saveRaw($('#rawTextarea').value);
+    render();
+  });
+
+  $('#btnSortName').addEventListener('click', ()=>{
+    if(sortKey==='name') sortDir *= -1; else { sortKey='name'; sortDir=1; }
+    render();
+  });
+  $('#btnSortCount').addEventListener('click', ()=>{
+    if(sortKey==='count') sortDir *= -1; else { sortKey='count'; sortDir=1; }
+    render();
+  });
+
+  // File upload (.csv)
+  $('#fileInput').addEventListener('change', (e)=>{
+    const f = e.target.files?.[0];
+    if(!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = reader.result?.toString() || '';
+      // Merge with existing text (optional); here we replace to keep it simple
+      $('#rawTextarea').value = text.trim();
+      saveRaw(text.trim());
+      render();
+    };
+    reader.readAsText(f, 'utf-8');
+    // reset input so same file can be reloaded
+    e.target.value = '';
+  });
+
+  // Exporters
+  function download(filename, content, mime='text/csv;charset=utf-8'){
+    const blob = new Blob([content], {type:mime});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+  }
+
+  $('#btnExportRaw').addEventListener('click', ()=>{
+    const text = $('#rawTextarea').value;
+    // Ensure CSV formatting
+    const rows = parseCSV(text);
+    download('raw_companies.csv', toCSV(rows));
+  });
+
+  $('#btnExportClean').addEventListener('click', ()=>{
+    const recs = sortRecords(parseRawToRecords($('#rawTextarea').value));
+    const rows = [['اسم الشركة','حالة الشركة','عدد المشاريع','المشاريع الحالية']]
+      .concat(recs.map(r=>[r.name, r.status, r.count, r.projects]));
+    download('clean_companies.csv', toCSV(rows));
+  });
+
+  // Initial load
+  $('#rawTextarea').value = loadRaw();
+  applyLang();
+  render();
+})();
+</script>
+</body>
+</html>
